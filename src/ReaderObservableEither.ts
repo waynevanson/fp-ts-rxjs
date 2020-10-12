@@ -79,15 +79,6 @@ export function of<R, E, A>(a: A): ReaderObservableEither<R, E, A> {
 /**
  * @since 0.6.10
  */
-export function alt<R, E, A>(
-  that: () => ReaderObservableEither<R, E, A>
-): (fa: ReaderObservableEither<R, E, A>) => ReaderObservableEither<R, E, A> {
-  return fa => r => OBE.alt(() => that()(r))(fa(r))
-}
-
-/**
- * @since 0.6.10
- */
 export function fromIO<R, E, A>(a: IO.IO<A>): ReaderObservableEither<R, E, A> {
   return () => OBE.observableEither.fromIO(a)
 }
