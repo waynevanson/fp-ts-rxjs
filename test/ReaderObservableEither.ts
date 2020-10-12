@@ -1,37 +1,35 @@
 import * as assert from 'assert'
-import { either as E, reader as R, task as T } from 'fp-ts'
+import { either as E, io as IO, reader as R, task as T } from 'fp-ts'
 import { flow, pipe } from 'fp-ts/lib/function'
 import { bufferTime } from 'rxjs/operators'
-import { readerObservableEither as ROBE, observable as OB } from '../src'
+import { observable as OB, observableEither as OBE, readerObservableEither as ROBE } from '../src'
 
 // test helper to dry up LOC.
 const buffer = flow(R.map(bufferTime(10)), R.map(OB.toTask))
 
 describe('ReaderObservable', () => {
-  describe('Monad', () => {
-    it('map', async () => {
-      const double = (n: number): number => n * 2
+  it('map', async () => {
+    const double = (n: number): number => n * 2
 
-      const robe = pipe(ROBE.of(3), ROBE.map(double), buffer)
-      const x = await robe({})()
-      assert.deepStrictEqual(x, [E.right(6)])
-    })
+    const robe = pipe(ROBE.of(3), ROBE.map(double), buffer)
+    const x = await robe({})()
+    assert.deepStrictEqual(x, [E.right(6)])
+  })
 
-    it('ap', async () => {
-      const double = (n: number): number => n * 2
-      const mab = ROBE.of(double)
-      const ma = ROBE.of(1)
-      const robe = pipe(mab, ROBE.ap(ma), buffer)
-      const x = await robe({})()
-      assert.deepStrictEqual(x, [E.right(2)])
-    })
+  it('ap', async () => {
+    const double = (n: number): number => n * 2
+    const mab = ROBE.of(double)
+    const ma = ROBE.of(1)
+    const robe = pipe(mab, ROBE.ap(ma), buffer)
+    const x = await robe({})()
+    assert.deepStrictEqual(x, [E.right(2)])
+  })
 
-    it('chain', async () => {
-      const f = (a: string) => ROBE.of(a.length)
-      const robe = pipe(ROBE.of('foo'), ROBE.chain(f), buffer)
-      const x = await robe({})()
-      assert.deepStrictEqual(x, [E.right(3)])
-    })
+  it('chain', async () => {
+    const f = (a: string) => ROBE.of(a.length)
+    const robe = pipe(ROBE.of('foo'), ROBE.chain(f), buffer)
+    const x = await robe({})()
+    assert.deepStrictEqual(x, [E.right(3)])
   })
 
   describe('bimap', () => {
@@ -54,10 +52,25 @@ describe('ReaderObservable', () => {
     })
   })
 
+  it('mapLeft', async () => {
+    const double = (n: number): number => n * 2
+    const doubleup = flow(double, double)
+
+    const robe = pipe(ROBE.throwError<unknown, number, number>(3), ROBE.mapLeft(doubleup), buffer)
+    const x = await robe({})()
+    assert.deepStrictEqual(x, [E.left(12)])
+  })
+
   it('of', async () => {
     const robe = pipe(ROBE.of('foo'), buffer)
     const x = await robe('')()
     assert.deepStrictEqual(x, [E.right('foo')])
+  })
+
+  it('ask', async () => {
+    const robe = pipe(ROBE.ask<string, any>(), buffer)
+    const x = await robe('foo')()
+    return assert.deepStrictEqual(x, [E.right('foo')])
   })
 
   it('asks', async () => {
@@ -84,6 +97,30 @@ describe('ReaderObservable', () => {
 
   it('fromTask', async () => {
     const robe = pipe(ROBE.fromTask(T.of(1)), buffer)
+    const x = await robe({})()
+    assert.deepStrictEqual(x, [E.right(1)])
+  })
+
+  it('fromObservableEither', async () => {
+    const robe = pipe(ROBE.fromObservableEither(OBE.observableEither.of(1)), buffer)
+    const x = await robe({})()
+    assert.deepStrictEqual(x, [E.right(1)])
+  })
+
+  it('fromReader', async () => {
+    const robe = pipe(ROBE.fromReader(R.of(1)), buffer)
+    const x = await robe({})()
+    assert.deepStrictEqual(x, [E.right(1)])
+  })
+
+  it('fromIO', async () => {
+    const robe = pipe(ROBE.fromIO(IO.of(1)), buffer)
+    const x = await robe({})()
+    assert.deepStrictEqual(x, [E.right(1)])
+  })
+
+  it('fromObservable', async () => {
+    const robe = pipe(ROBE.fromObservable(OB.of(1)), buffer)
     const x = await robe({})()
     assert.deepStrictEqual(x, [E.right(1)])
   })
